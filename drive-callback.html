@@ -1,15 +1,48 @@
-<!-- drive-callback.html  (host at: https://noamaris-eng.github.io/figma-drive-callback/drive-callback.html) -->
 <!doctype html><meta charset="utf-8" />
+<style>
+  body { font: 14px system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 24px; line-height:1.5; }
+  code { padding:2px 6px; border:1px solid #888; border-radius:4px; font-weight:600; display:inline-block; }
+  button { padding:6px 10px; margin-left:10px; }
+</style>
 <script>
   (function () {
     const p = new URLSearchParams(location.search);
     const code  = p.get('code');
-    const state = p.get('state');
-    if (code && window.opener) {
-      window.opener.postMessage({ type:'gdrive_oauth_code', code, state }, '*');
-      window.close();
-    } else {
-      document.write('Missing code/state');
+    const err   = p.get('error');
+    const desc  = p.get('error_description');
+
+    function renderManual(msg) {
+      document.body.innerHTML = msg;
     }
+
+    if (err) {
+      // Report error to opener if possible
+      try { window.opener && window.opener.postMessage({ type:'gdrive_oauth_error', error: err, error_description: desc }, '*'); } catch(_) {}
+      renderManual(`<h3>Google OAuth Error</h3><div>${err}${desc ? ' — ' + desc : ''}</div>`);
+      return;
+    }
+
+    if (code) {
+      // Try to send the code to the opener (works in Figma Web)
+      let posted = false;
+      try {
+        if (window.opener) {
+          window.opener.postMessage({ type:'gdrive_oauth_code', code }, '*');
+          posted = true;
+        }
+      } catch(_) {}
+      if (posted) { window.close(); return; }
+
+      // Fallback (e.g., Figma desktop): show the code to copy/paste
+      renderManual(`
+        <h3>Copy this code and paste it into the plugin</h3>
+        <p>Return to Figma and paste this code in the plugin window:</p>
+        <p><code id="c">${code}</code><button onclick="navigator.clipboard.writeText('${code}')">Copy</button></p>
+        <p>You can close this tab after pasting.</p>
+      `);
+      return;
+    }
+
+    renderManual('Missing code/state');
   })();
 </script>
