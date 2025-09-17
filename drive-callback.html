@@ -11,35 +11,30 @@
     const err   = p.get('error');
     const desc  = p.get('error_description');
 
-    function renderManual(msg) {
-      document.body.innerHTML = msg;
-    }
+    function renderManual(html) { document.body.innerHTML = html; }
 
     if (err) {
-      // Report error to opener if possible
       try { window.opener && window.opener.postMessage({ type:'gdrive_oauth_error', error: err, error_description: desc }, '*'); } catch(_) {}
-      renderManual(`<h3>Google OAuth Error</h3><div>${err}${desc ? ' — ' + desc : ''}</div>`);
+      renderManual('<h3>Google OAuth Error</h3><div>'+ (err || 'Error') + (desc ? ' — ' + desc : '') +'</div>');
       return;
     }
 
     if (code) {
-      // Try to send the code to the opener (works in Figma Web)
-      let posted = false;
+      // Try to return to opener (works in web)
       try {
         if (window.opener) {
-          window.opener.postMessage({ type:'gdrive_oauth_code', code }, '*');
-          posted = true;
+          window.opener.postMessage({ type:'gdrive_oauth_code', code: code }, '*');
+          window.close();
+          return;
         }
       } catch(_) {}
-      if (posted) { window.close(); return; }
-
-      // Fallback (e.g., Figma desktop): show the code to copy/paste
-      renderManual(`
-        <h3>Copy this code and paste it into the plugin</h3>
-        <p>Return to Figma and paste this code in the plugin window:</p>
-        <p><code id="c">${code}</code><button onclick="navigator.clipboard.writeText('${code}')">Copy</button></p>
-        <p>You can close this tab after pasting.</p>
-      `);
+      // Desktop fallback: show the code
+      renderManual(
+        '<h3>Copy this code and paste it into the plugin</h3>' +
+        '<p>Return to Figma and paste this code in the plugin window:</p>' +
+        '<p><code id="c">'+code+'</code><button onclick="navigator.clipboard.writeText(\''+code+'\')">Copy</button></p>' +
+        '<p>You can close this tab after pasting.</p>'
+      );
       return;
     }
 
