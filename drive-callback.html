@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8" />
+<script>
+  (function () {
+    const p = new URLSearchParams(location.search);
+    const code  = p.get('code');
+    const state = p.get('state');
+    if (code && window.opener) {
+      window.opener.postMessage({ type:'gdrive_oauth_code', code, state }, '*');
+      window.close();
+    } else {
+      document.write('Missing code/state');
+    }
+  })();
+</script>
