@@ -8,36 +8,34 @@
   (function () {
     const p = new URLSearchParams(location.search);
     const code  = p.get('code');
+    const state = p.get('state');
     const err   = p.get('error');
     const desc  = p.get('error_description');
 
-    function renderManual(html) { document.body.innerHTML = html; }
+    function render(html){ document.body.innerHTML = html; }
 
     if (err) {
       try { window.opener && window.opener.postMessage({ type:'gdrive_oauth_error', error: err, error_description: desc }, '*'); } catch(_) {}
-      renderManual('<h3>Google OAuth Error</h3><div>'+ (err || 'Error') + (desc ? ' — ' + desc : '') +'</div>');
+      render('<h3>Google OAuth Error</h3><div>'+ (err || 'Error') + (desc ? ' — ' + desc : '') +'</div>');
       return;
     }
 
     if (code) {
-      // Try to return to opener (works in web)
       try {
         if (window.opener) {
-          window.opener.postMessage({ type:'gdrive_oauth_code', code: code }, '*');
+          window.opener.postMessage({ type:'gdrive_oauth_code', code: code, state: state }, '*');
           window.close();
           return;
         }
       } catch(_) {}
-      // Desktop fallback: show the code
-      renderManual(
+
+      render(
         '<h3>Copy this code and paste it into the plugin</h3>' +
-        '<p>Return to Figma and paste this code in the plugin window:</p>' +
-        '<p><code id="c">'+code+'</code><button onclick="navigator.clipboard.writeText(\''+code+'\')">Copy</button></p>' +
-        '<p>You can close this tab after pasting.</p>'
+        '<p><code id="c">'+code+'</code> <button onclick="navigator.clipboard.writeText(\''+code+'\')">Copy</button></p>'
       );
       return;
     }
 
-    renderManual('Missing code/state');
+    render('Missing code/state');
   })();
 </script>
