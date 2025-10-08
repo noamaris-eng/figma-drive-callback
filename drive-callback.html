@@ -4,30 +4,34 @@
 <style>
   body { font:14px system-ui, -apple-system, Segoe UI, Roboto, Arial; padding:24px; }
 </style>
+<body>Google Drive connected. You can close this window.</body>
 <script>
 (function(){
   var token = null;
   try {
-    var h = new URLSearchParams(location.hash.slice(1));
+    var h = new URLSearchParams(location.hash.slice(1)); // implicit flow puts token in hash
     token = h.get('access_token') || null;
   } catch(e) {}
 
-  function sendToken(){
-    try { if (window.opener) window.opener.postMessage({ type:'drive-token', accessToken: token }, '*'); } catch(_){}
-    try { if (window.opener && window.opener.parent) window.opener.parent.postMessage({ type:'drive-token', accessToken: token }, '*'); } catch(_){}
-    try { if (window.opener && window.opener.top) window.opener.top.postMessage({ type:'drive-token', accessToken: token }, '*'); } catch(_){}
+  function sendTokenOnce() {
+    var msg = { type:'drive-token', accessToken: token };
+    try { if (window.opener) window.opener.postMessage(msg, '*'); } catch(_){}
+    try { if (window.opener && window.opener.parent) window.opener.parent.postMessage(msg, '*'); } catch(_){}
+    try { if (window.opener && window.opener.top) window.opener.top.postMessage(msg, '*'); } catch(_){}
   }
 
   if (token) {
-    // blast a few times in case opener is still loading / sandboxed
-    sendToken();
+    // blast a few times to handle timing/opener quirks
+    sendTokenOnce();
     var tries = 0;
     var t = setInterval(function(){
       tries++;
-      sendToken();
-      if (tries > 15) { clearInterval(t); try{ window.close(); }catch(_){ } }
-    }, 300);
+      sendTokenOnce();
+      if (tries > 20) { clearInterval(t); try{ window.close(); }catch(_){} }
+    }, 250);
+  } else {
+    // no token in hash → just show a minimal message
+    document.body.textContent = "No access token found. Close this window and click Connect again.";
   }
 })();
 </script>
-<body>You can close this window.</body>
