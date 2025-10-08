@@ -9,7 +9,7 @@
 (function(){
   var token = null;
   try {
-    var h = new URLSearchParams(location.hash.slice(1)); // implicit flow puts token in hash
+    var h = new URLSearchParams(location.hash.slice(1)); // implicit flow token in hash
     token = h.get('access_token') || null;
   } catch(e) {}
 
@@ -21,7 +21,6 @@
   }
 
   if (token) {
-    // blast a few times to handle timing/opener quirks
     sendTokenOnce();
     var tries = 0;
     var t = setInterval(function(){
@@ -30,7 +29,6 @@
       if (tries > 20) { clearInterval(t); try{ window.close(); }catch(_){} }
     }, 250);
   } else {
-    // no token in hash → just show a minimal message
     document.body.textContent = "No access token found. Close this window and click Connect again.";
   }
 })();
