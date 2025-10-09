@@ -2,34 +2,54 @@
 <meta charset="utf-8" />
 <title>Drive OAuth Redirect</title>
 <style>
-  body { font:14px system-ui, -apple-system, Segoe UI, Roboto, Arial; padding:24px; }
+  body { font:14px system-ui, -apple-system, Segoe UI, Roboto, Arial; padding:24px; max-width:720px; }
+  h3 { margin-top:0; }
+  code { background:#f6f8fa; padding:3px 6px; border-radius:6px; word-break:break-all; }
+  button { padding:6px 10px; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer; }
+  .muted { color:#666; }
 </style>
-<body>Google Drive connected. You can close this window.</body>
+
+<h3>Google Drive Connected</h3>
+<p class="muted">If your Figma plugin didn’t update automatically, copy the token below and paste it in the plugin (Paste Token → Save).</p>
+
+<p>Access Token:</p>
+<p><code id="tok">—</code></p>
+<p><button id="copy">Copy token</button></p>
+
 <script>
 (function(){
   var token = null;
   try {
-    var h = new URLSearchParams(location.hash.slice(1)); // implicit flow token in hash
+    // Implicit flow returns token in the URL hash
+    var h = new URLSearchParams(location.hash.slice(1));
     token = h.get('access_token') || null;
   } catch(e) {}
 
-  function sendTokenOnce() {
-    var msg = { type:'drive-token', accessToken: token };
+  document.getElementById('tok').textContent = token ? token : '(missing)';
+
+  // Try to notify the opener if the browser allows it (sometimes blocked by hosting headers)
+  function tryPostMessage() {
+    var msg = { type: 'drive-token', accessToken: token };
     try { if (window.opener) window.opener.postMessage(msg, '*'); } catch(_){}
     try { if (window.opener && window.opener.parent) window.opener.parent.postMessage(msg, '*'); } catch(_){}
     try { if (window.opener && window.opener.top) window.opener.top.postMessage(msg, '*'); } catch(_){}
   }
-
   if (token) {
-    sendTokenOnce();
-    var tries = 0;
-    var t = setInterval(function(){
-      tries++;
-      sendTokenOnce();
-      if (tries > 20) { clearInterval(t); try{ window.close(); }catch(_){} }
+    tryPostMessage();
+    // fire a few times in case timing/opener is late
+    var tries = 0, t = setInterval(function(){
+      tries++; tryPostMessage();
+      if (tries > 15) { clearInterval(t); }
     }, 250);
-  } else {
-    document.body.textContent = "No access token found. Close this window and click Connect again.";
   }
+
+  document.getElementById('copy').onclick = function(){
+    if (!token) { alert('No token found in URL. Close and try Connect again.'); return; }
+    navigator.clipboard.writeText(token).then(function(){
+      alert('Token copied. Go back to the plugin and paste it.');
+    }).catch(function(){
+      alert('Copy failed. Manually select and copy the token text.');
+    });
+  };
 })();
 </script>
